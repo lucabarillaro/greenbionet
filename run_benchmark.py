@@ -2751,11 +2751,11 @@ def parse_args():
                         choices=["fp32", "fp16"],
                         help="Precision to run (default: both)")
     parser.add_argument("--batch", type=int, default=16)
-    parser.add_argument("--infer-batch", type=int, default=16)
+    parser.add_argument("--infer_batch", type=int, default=16)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--run-suffix", default="__final")
-    parser.add_argument("--energy-backend", choices=["jetson", "x86"],default="x86",help="Energy measurement backend (default x86, tegrastats must be selected on Jetson)")
-	parser.add_argument("--output-dir", default="outputs")
+    parser.add_argument("--run_suffix", default="__final")
+    parser.add_argument("--energy_backend", choices=["jetson", "x86"],default="x86",help="Energy measurement backend (default x86, tegrastats must be selected on Jetson)")
+	parser.add_argument("--output_dir", default="outputs")
 
     return parser.parse_args()
 
