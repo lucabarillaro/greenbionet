@@ -1,0 +1,48 @@
+# ===============================
+# Core scientific stack
+# ===============================
+numpy>=1.22,<2.0
+scipy>=1.8
+pandas>=1.4
+scikit-learn>=1.1
+
+# ===============================
+# Deep learning (Jetson-specific)
+# ===============================
+# NOTE:
+# PyTorch must be installed via NVIDIA JetPack wheels.
+# Do NOT install torch via pip on Jetson.
+torch>=2.0
+torchvision>=0.15
+
+# ===============================
+# PyTorch Geometric ecosystem
+# ===============================
+torch-geometric>=2.3
+
+# These are usually required by PyG depending on the ops used.
+# On Jetson, install via prebuilt wheels when available.
+torch-scatter
+torch-sparse
+torch-cluster
+torch-spline-conv
+
+# ===============================
+# Energy & system monitoring
+# ===============================
+codecarbon>=2.3
+pynvml>=11.4 
+#or nvidia-ml-py to avoid deprecation warnings
+
+# ===============================
+# Utilities
+# ===============================
+tqdm>=4.64
+psutil>=5.9
+pyyaml>=6.0
+
+# ===============================
+# Plotting (used in analysis / debugging)
+# ===============================
+matplotlib>=3.6
+seaborn>=0.12
