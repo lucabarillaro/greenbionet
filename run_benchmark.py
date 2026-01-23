@@ -122,9 +122,10 @@ def gpu_reserved_peak_mb(model=None):
 		return torch.cuda.max_memory_reserved(device=dev) / 1e6  # MB
 	return float('nan')
 
+
 # ==== Robust TegraStatsSampler (Jetson AGX Orin) ====
 
-class TegraStatsSampler:
+class TegraStatsSamplerOLD:
 	"""
 	Background reader for `tegrastats`.
 
@@ -249,6 +250,7 @@ class TegraStatsSampler:
 		with self._lock:
 			if not self._samples: return float("nan")
 			return float(sum(p for _,p in self._samples)/len(self._samples))
+
 # ==== TRAIN METRICS UTILS ====
 
 
@@ -1430,7 +1432,8 @@ def run_experiment(dataset_name: str, model_name: str, cfg: dict, run_name_suffi
 	for k in header: summary.setdefault(k, "")
 	# write CSV
 	
-	csv_path = "outputs/runs_jetson.csv"
+	#csv_path = "outputs/runs_jetson.csv"
+	csv_path=CSV_PATH_ALL
 	exists = Path(csv_path).exists()
 	with open(csv_path, "a", newline="") as f:
 		w = csv.DictWriter(f, fieldnames=header)
@@ -1734,7 +1737,8 @@ def run_experiment_collab(model_name: str, cfg: dict, run_name_suffix: str = "")
 	"val_metric_final","latency_p50_ms","latency_p95_ms","throughput_req_s","mean_power_w","energy_per_inf_j","test_acc","infer_gpu_mem_peak_mb","infer_gpu_mem_reserved_peak_mb"]
 	for k in header: summary.setdefault(k, "")
 	os.makedirs("outputs", exist_ok=True)
-	csv_path = "outputs/runs_jetson.csv"
+	#csv_path = "outputs/runs_jetson.csv"
+	csv_path=CSV_PATH_ALL
 	exists = os.path.exists(csv_path)
 	
 	with open(csv_path, "a", newline="") as f:
@@ -2146,7 +2150,7 @@ def run_experiment_khop(dataset_name, model_name, cfg, run_name_suffix=""):
 	"infer_gpu_mem_reserved_peak_mb": infer_gpu_mem_reserved_peak_mb,
 	})
 	print(json.dumps(summary, indent=2))
-	append_summary_to_csv(summary, csv_path="outputs/runs_all.csv")
+	append_summary_to_csv(summary, csv_path=CSV_PATH_ALL)
 	return summary
 
 # ==== SUMMARY + CSV HELPERS ====
@@ -2189,7 +2193,7 @@ def build_summary(*, dataset_name, model_name, precision, batch, seed, phase,
 	out["test_acc"] = float(test_acc) if test_acc is not None else ""
 	return out
 
-def append_summary_to_csv(summary, csv_path="outputs/runs_all.csv"):
+def append_summary_to_csv(summary, csv_path=CSV_PATH_ALL):
 	os.makedirs(os.path.dirname(csv_path), exist_ok=True)
 	exists = os.path.exists(csv_path)
 	with open(csv_path, "a", newline="") as f:
@@ -2722,7 +2726,9 @@ def orchestrator(args):
 								   device_name=platform.platform(), dataset=ds, model=m,
 								   precision=p, batch="", seed=base_cfg.get("seed",42),
 								   phase="error")
-						append_summary_to_csv(err, csv_path="outputs/runs_allN15_1_s42.csv")
+						append_summary_to_csv(err, csv_path=str(OUTPUT_DIR / "runs_errors.csv")
+						str(OUTPUT_DIR / "runs_errors.csv"
+						#"outputs/runs_allN15_1_s42.csv"
 					finally:
 						# Always clear memory between runs
 						#_cleanup_cuda()
@@ -2748,9 +2754,12 @@ def parse_args():
     parser.add_argument("--infer-batch", type=int, default=16)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--run-suffix", default="__final")
+    parser.add_argument("--energy-backend", choices=["jetson", "x86"],default="x86",help="Energy measurement backend (default x86, tegrastats must be selected on Jetson)")
+	parser.add_argument("--output-dir", default="outputs")
 
     return parser.parse_args()
-    
+
+  
 ROOT = Path(__file__).parent.resolve()
 DATA_DIR = ROOT / "data"
 RESULTS_DIR = ROOT / "results"
@@ -2759,17 +2768,27 @@ RESULTS_DIR.mkdir(exist_ok=True)
 
 def main():
     args = parse_args()
-	
-	#orchestrator(
-    #    dataset_name=args.dataset,
-    #    model_name=args.model,
-    #    batch=args.batch,
-    #    infer_batch=args.infer-batch
-    #    precision=args.precision,
-    #    seed=args.seed,
-    #)
+	# --- output dir (CCP-compatible) ---
+    output_dir = Path(args.output_dir).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- energy backend selection ---
+    if args.energy_backend == "x86":
+        from tegra_to_codecarbon import TegraStatsSampler
+        print("[Energy] Using CodeCarbon+NVML backend (x86).")
+    else:
+        from tegrastats_jetson import TegraStatsSampler
+        print("[Energy] Using native tegrastats backend (Jetson).")
+
+    # Make these visible to the rest of the script (lowest-change approach)
+    globals()["TegraStatsSampler"] = TegraStatsSampler
+    globals()["OUTPUT_DIR"] = output_dir
+
+    # choose output CSV paths once
+    globals()["CSV_PATH_ALL"] = str(output_dir / "runs_all.csv")
+
     orchestrator(args)
-    #run_grid(run_suffix=args.run_suffix)	
+    
 
 if __name__ == "__main__":
     main()

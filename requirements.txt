@@ -7,7 +7,7 @@ pandas>=1.4
 scikit-learn>=1.1
 
 # ===============================
-# Deep learning (Jetson-specific)
+# Deep learning (REMIND Jetson-specific versions on such platforms)
 # ===============================
 # NOTE:
 # PyTorch must be installed via NVIDIA JetPack wheels.
